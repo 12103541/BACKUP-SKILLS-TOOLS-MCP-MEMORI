@@ -1,0 +1,8 @@
+{
+  "taps": [
+    {
+      "repo": "https://github.com/nexu-io/open-design.git",
+      "path": "skills/"
+    }
+  ]
+}

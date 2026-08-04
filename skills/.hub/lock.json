@@ -1,0 +1,42 @@
+{
+  "version": 1,
+  "installed": {
+    "hyperframes": {
+      "source": "official",
+      "identifier": "official/creative\\hyperframes",
+      "trust_level": "builtin",
+      "scan_verdict": "caution",
+      "content_hash": "sha256:6311a11f85bd5760",
+      "install_path": "hyperframes",
+      "files": [
+        "SKILL.md",
+        "references\\cli.md",
+        "references\\composition.md",
+        "references\\features.md",
+        "references\\gsap.md",
+        "references\\troubleshooting.md",
+        "references\\website-to-video.md",
+        "scripts\\setup.sh"
+      ],
+      "metadata": {},
+      "installed_at": "2026-07-24T01:59:17.264317+00:00",
+      "updated_at": "2026-07-24T01:59:17.264317+00:00"
+    },
+    "yuanbao": {
+      "source": "official",
+      "identifier": "official/yuanbao",
+      "trust_level": "builtin",
+      "scan_verdict": "backfilled",
+      "content_hash": "sha256:881625ad1581ec37",
+      "install_path": "yuanbao",
+      "files": [
+        "SKILL.md"
+      ],
+      "metadata": {
+        "backfilled_from": "optional-skills"
+      },
+      "installed_at": "2026-07-28T15:52:09.507120+00:00",
+      "updated_at": "2026-07-28T15:52:09.507120+00:00"
+    }
+  }
+}

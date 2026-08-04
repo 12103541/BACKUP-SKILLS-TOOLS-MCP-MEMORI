@@ -1,0 +1,166 @@
+# Full LiteLLM Config Example for ERP Project
+# Save as config.yaml and run: litellm --config config.yaml --port 4000
+
+general_settings:
+  master_key: "sk-litellm-master-key-change-in-production"
+  database_url: "postgresql://user:pass@localhost:5432/litellm"  # optional, for persistence
+  redis_url: "redis://localhost:6379/0"  # optional, for caching/rate limiting
+  log_level: "INFO"
+
+model_list:
+  # Primary: DeepSeek via OpenRouter
+  - model_name: deepseek-chat
+    litellm_params:
+      model: openrouter/deepseek/deepseek-chat
+      api_key: "${OPENROUTER_API_KEY}"
+      max_tokens: 8192
+      temperature: 0.1
+
+  # Fallback: GPT-4o-mini (cheap, reliable)
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openai/gpt-4o-mini
+      api_key: "${OPENAI_API_KEY}"
+      max_tokens: 16384
+      temperature: 0.1
+
+  # Local: Ollama (free, private)
+  - model_name: llama3-local
+    litellm_params:
+      model: ollama/llama3
+      api_base: http://host.docker.internal:11434
+      max_tokens: 8192
+
+  # Embeddings
+  - model_name: text-embedding-3-small
+    litellm_params:
+      model: openai/text-embedding-3-small
+      api_key: "${OPENAI_API_KEY}"
+
+router_settings:
+  routing_strategy: "usage-based-routing"
+  fallback_models: ["gpt-4o-mini"]
+  enable_retries: true
+  num_retries: 2
+  retry_after: 1
+
+# Virtual Keys - create via dashboard or API
+# Each project/dept gets its own key with budget
+# Example virtual key config (apply via dashboard):
+# {
+#   "key_name": "erp-project-abc",
+#   "budget_id": "project-abc-budget",
+#   "max_budget": 100.00,
+#   "budget_duration": "monthly",
+#   "model_access": ["deepseek-chat", "gpt-4o-mini"],
+#   "rate_limit": 100,
+#   "rpm_limit": 60
+# }
+
+# Guardrails for ERP sensitive data
+guardrails:
+  - guardrail_name: "pii_masking_erp"
+    litellm_params:
+      mode: "pre_call"
+      pii_entities:
+        - "PHONE_NUMBER"
+        - "EMAIL_ADDRESS"
+        - "CREDIT_CARD"
+        - "US_SSN"
+        - "IBAN_CODE"
+      action: "mask"
+      preserve_format: true
+
+  - guardrail_name: "prompt_injection"
+    litellm_params:
+      mode: "pre_call"
+      threshold: 0.8
+      action: "block"
+      detect_user_role: true
+
+  - guardrail_name: "financial_data_protection"
+    litellm_params:
+      mode: "pre_call"
+      custom_rules:
+        - pattern: "(harga|biaya|anggaran|nilai).*kontrak"
+          action: "mask"
+          description: "Mask contract values in prompts"
+
+# MCP Gateway - expose ERP tools to AI agents
+mcp_servers:
+  - name: "erp-tools"
+    type: "stdio"
+    command: "php"
+    args: ["artisan", "mcp:serve"]
+    env:
+      APP_ENV: "local"
+    tools:
+      - "get_kontrak_by_nomor"
+      - "create_penawaran_draft"
+      - "get_rab_by_pekerjaan"
+      - "generate_bast_pdf"
+      - "search_sparepart"
+      - "get_progres_pekerjaan"
+
+  - name: "dms-tools"
+    type: "http"
+    url: "http://localhost:8000/mcp/dms"
+    tools:
+      - "upload_dokumen"
+      - "search_dokumen"
+      - "get_dokumen_by_id"
+
+# Callbacks for observability
+litellm_settings:
+  callbacks:
+    - "langfuse"
+    - "custom_callback"
+  custom_callback_url: "http://localhost:8000/api/litellm/callback"
+  custom_callback_headers:
+    Authorization: "Bearer ${CALLBACK_SECRET}"
+
+# Cost tracking
+cost_settings:
+  track_cost: true
+  cost_per_token: true
+  budget_alerts:
+    - threshold: 0.8
+      webhook_url: "http://localhost:8000/api/budget/alert"
+
+# Admin UI
+ui:
+  enabled: true
+  path: "/ui"
+  title: "ERP AI Gateway"
+
+---
+
+# Session Reference: Minimal Config Used (July 31, 2026)
+# Working config from live session — no DB, no Redis, OpenRouter only
+model_list:
+  - model_name: deepseek-chat
+    litellm_params:
+      model: openrouter/deepseek/deepseek-chat
+      api_key: "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"
+    model_info:
+      input_cost_per_token: 0.00000014
+      output_cost_per_token: 0.00000028
+  - model_name: gpt-4o-mini
+    litellm_params:
+      model: openrouter/openai/gpt-4o-mini
+      api_key: "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"
+    model_info:
+      input_cost_per_token: 0.00000015
+      output_cost_per_token: 0.0000006
+
+general_settings:
+  master_key: "sk-litellm-master-2024"
+
+# Key findings from session:
+# 1. OpenRouter model IDs must use full path: openrouter/deepseek/deepseek-chat (not deepseek-chat)
+# 2. API key MUST be in config.yaml litellm_params.api_key — header Authorization ignored
+# 3. SQLite NOT supported for virtual keys — requires PostgreSQL
+# 4. Master key required for requests when no DB connected
+# 5. Windows config path: use forward slashes C:/Users/xxx/config.yaml
+# 6. Fallback works via router_settings.fallback_models (needs router init)
+# 7. Cost tracking via model_info input/output cost per token
